@@ -25,7 +25,7 @@ enum Token
 	Num = 128, Loc, Fun, Sys,
 	Id,
 	Char, Int, If, Else, While, Return,
-	Assign,  
+	Assign,
 	Eq, Ne, Gt,
 	Add, Sub, Mul, Div
 };
@@ -43,10 +43,10 @@ ADJ 一般在JSR后调用，弹出函数参数
 */
 enum Code
 {
-	ENT = 1, LEV, JSR, ADJ,   
-	JMP, BZ,  BNZ, 
-	LEA, IMM, PSH, LI,  LC,  SI,  SC,  
-    
+	ENT = 1, LEV, JSR, ADJ,
+	JMP, BZ,  BNZ,
+	LEA, IMM, PSH, LI,  LC,  SI,  SC,
+
 	EQ, NE, GT,
 	ADD, SUB, MUL, DIV,
 	PRT, EXT
@@ -60,9 +60,9 @@ enum VarType
 #define PoolLen (256*1024)
 
 // 符号表（描述标识符的数据结构）
-typedef struct _Identifier 
+typedef struct _Identifier
 {
-	int tk;   // 例如Id, Char 
+	int tk;   // 例如Id, Char
 	int hash; // 用于比较两个Identifier是否相同
 	int name; // 指向该识别符avatar地址(在bss中)
 	int kind; // Glo, Fun, Sys, Num(仅全局enum变量)等
@@ -84,7 +84,7 @@ typedef struct _Identifier
 Identifier table[1000]; // 符号表
 // 用于词法解析
 char* p;
-char* lp; 
+char* lp;
 int tk;
 int id;
 int idmain;
@@ -103,7 +103,7 @@ int text[PoolLen]; // 指令区 (解析结果)
 char bss[PoolLen]; // 数据区（解析结果，存储全局变量和字符串）
 
 // 虚拟机的栈
-int stack[PoolLen + 1]; 
+int stack[PoolLen + 1];
 
 bool parse(char* src);
 bool run(int* startaddr);
@@ -207,7 +207,7 @@ void next()
 		tk = *p++;
 		if(tk == '\n')     {  printCode(); line++; col = 0;}
 		else if(tk == '#') {  while(*p !=0 && *p != '\n') p++; } // 忽略include和define等预处理语句
-		else if(isAlpha(tk)) // 函数、变量、系统调用和保留字		
+		else if(isAlpha(tk)) // 函数、变量、系统调用和保留字
 		{
 			p0 = p - 1;
 			while(isAlpha(*p) || isNumber(*p))
@@ -234,8 +234,8 @@ void next()
 			if(*p == '/') { p++; while(*p != 0 && *p != '\n') p++; } // 这里不return，继续查找下一个token
 			else { tk = Div; return; } // 除法
 		}
-		else if(tk == '"') // 字符串的tk是'"'，值放在data中,地址放在nVal 
-		{   
+		else if(tk == '"') // 字符串的tk是'"'，值放在data中,地址放在nVal
+		{
 			p0 = data;
 			while(*p != 0 && *p != tk)
 			{
@@ -245,7 +245,7 @@ void next()
 					nVal = *p++;
 					if(nVal == 'n') nVal = '\n';
 				}
-				*data++ = nVal; 
+				*data++ = nVal;
 			}
 			p++; nVal = (int)p0; return;
 		}
@@ -262,7 +262,7 @@ void next()
 	return;
 }
 
-/* 表达式解析函数 
+/* 表达式解析函数
    expr被外部调用4次，都是stmt，参数皆为Assign，expr()再次调用expr()时，lev必定增加
    expr退出的条件：当前tk优先级低于level
    优先级最低的操作符是赋值。
@@ -314,17 +314,17 @@ void expr(int lev)
 	}
 	else if(tk == Mul) // 取指
 	{
-		next(); expr(Div+1); check(ty > INT); ty -= PTR; 
+		next(); expr(Div+1); check(ty > INT); ty -= PTR;
 		*++e = (ty == CHAR) ? LC : LI;
 	}
 	else if(tk == '(')
 	{
-		next(); check(tk != Int && tk != Char);  
+		next(); check(tk != Int && tk != Char);
 		expr(Assign); match(')'); next();
 	}
 	else Wrong;
     // ------- 后半部分 -----------
-	while(tk >= lev) 
+	while(tk >= lev)
 	{
 		t = ty;
 		if(tk == Assign)
@@ -340,7 +340,7 @@ void expr(int lev)
 		else if(tk == Mul) { next(); *++e = PSH; expr(Div+1); *++e= MUL; ty = INT; }
 		else if(tk == Div) { next(); *++e = PSH; expr(Div+1); *++e = DIV; ty = INT; }
 		else Wrong;
-	} // while(tk >= lev) 
+	} // while(tk >= lev)
 }
 
 /* 语义块解析函数
@@ -350,7 +350,7 @@ void expr(int lev)
    else
    { ... }
    为一个语义块
-  
+
    stmt支持语义块嵌套
 注：遇到分号会返回，所以嵌套时，若以{为tk调用stmt，它会多次调用stmt，
      确保解析完毕整个语义块。
@@ -373,7 +373,7 @@ void stmt()
         stmt();  // stmt 最终可能调用expr, expr返回时，会将tk已指向下一个Token, 这里不用next()
 		if(tk == Else)
 		{
-			*b = (int)(e+3); // e[1] == jmp, e[2] == jmp addr; e[3] = else开始指令的地址  
+			*b = (int)(e+3); // e[1] == jmp, e[2] == jmp addr; e[3] = else开始指令的地址
 			*++e = JMP; // if(1) 执行完毕，跳转到else结束处
 			b = ++e;    // if(1) 执行完毕跳转的目的地
 			next();
@@ -393,7 +393,7 @@ void stmt()
 		*++e = BZ;  // 甲的尾部
         b = ++e;    // while结束后的地址
 		stmt();     // 乙
-		*++e = JMP; 
+		*++e = JMP;
 		*++e = (int)a;
 		*b = (int)(e+1);
 	}
@@ -410,10 +410,10 @@ void stmt()
 	{
 		next();
 		while(tk != '}') // 反复嵌套
-			stmt(); 
+			stmt();
 		next();
 	}
-	else if(tk == ';') 
+	else if(tk == ';')
 	{
 		next();
 	}
@@ -485,8 +485,8 @@ void symRestore()
 // 解析C语言字符src
 bool parse(char* src)
 {
-	int bt; // base type (像int* foo(), 其base type为int) 
-	int ty, i; 
+	int bt; // base type (像int* foo(), 其base type为int)
+	int ty, i;
 	prepare();
 	lp = p = src;
 	next();
@@ -496,12 +496,12 @@ bool parse(char* src)
 		else if(tk == Char) bt = CHAR;
 		else Wrong;
 		next();
-		while(tk!=';' && tk!='}') // 函数体 
+		while(tk!=';' && tk!='}') // 函数体
 		{
 			ty = bt;
 			while(tk==Mul) { next(); ty += PTR; };
 			check(tk == Id && !table[id].kind);
-			next(); 
+			next();
 			table[id].type = ty;
 			match('(');
 			table[id].kind = Fun;
@@ -519,12 +519,12 @@ bool parse(char* src)
 				check(table[id].kind != Loc);
 				symHide(id, Loc, ty, i++);  // 处理函数参数与全局标识符重名
 				next();
-				if(tk == ',') 
+				if(tk == ',')
 					next();
 			}
 			next();
 			match('{'); // 进入函数体
-			loc = ++i;  
+			loc = ++i;
 			next();
 			// printEnv();
 			while(tk==Int || tk == Char) // 逐行解析变量定义语句
@@ -535,11 +535,11 @@ bool parse(char* src)
 				{
 					ty=bt;
 					while(tk==Mul) { next(); ty += PTR; }
-					match(Id); 
+					match(Id);
 					check(table[id].kind != Loc); // 不和函数参数或其他局部变量重名
-					symHide(id, Loc, ty, ++i); 
+					symHide(id, Loc, ty, ++i);
 					next();
-					if(tk == ',') 
+					if(tk == ',')
 						next();
 				}
 				next();
